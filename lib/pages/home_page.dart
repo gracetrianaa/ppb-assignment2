@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:isar/isar.dart';
 import 'package:taskweekfour_todolist/models/task_model.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final Isar isar;
+  const HomePage({super.key, required this.isar});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -12,30 +14,44 @@ class _HomePageState extends State<HomePage> {
 
   List<TaskModel> tasksList = [];
 
-  void createTask({required TaskModel task}) {
+  @override
+  void initState() {
+    super.initState();
+    loadTasks();
+  }
+
+  Future<void> loadTasks() async {
+    final tasks = await widget.isar.taskModels.where().findAll();
     setState(() {
-      tasksList.add(task);
+      tasksList = tasks;
     });
   }
 
-  void updateTask({required String taskId, required String newTitle, required String status, required DateTime lastUpdated}) {
-    final taskIndex = tasksList.indexWhere((task) => task.id == taskId);
-    if (taskIndex != -1) {
-      setState(() {
-        tasksList[taskIndex] = TaskModel(
-          id: taskId,
-          title: newTitle,
-          status: status,
-          lastUpdated: lastUpdated,
-        );
-      });
-    }
+  Future<void> createTask({required TaskModel task}) async {
+    await widget.isar.writeTxn(() async {
+      await widget.isar.taskModels.put(task);
+    });
+    loadTasks();
   }
 
-  void deleteTask({required String taskId}) {
-    setState(() {
-      tasksList.removeWhere((task) => task.id == taskId);
+  Future<void> updateTask({required int taskId, required String newTitle, required String status, required DateTime lastUpdated}) async {
+    final task = await widget.isar.taskModels.get(taskId);
+    if (task != null) {
+      task.title = newTitle;
+      task.status = status;
+      task.lastUpdated = lastUpdated;
+      await widget.isar.writeTxn(() async {
+        await widget.isar.taskModels.put(task);
     });
+    loadTasks();
+  }}
+
+
+  Future<void> deleteTask({required int taskId}) async {
+    await widget.isar.writeTxn(() async {
+      await widget.isar.taskModels.delete(taskId);
+    });
+    loadTasks();
   }
 
   final TextEditingController taskTextEditingController = TextEditingController();
@@ -225,7 +241,6 @@ class _HomePageState extends State<HomePage> {
                     onPressed: () {
                       if (taskTextEditingController.text.isNotEmpty) {
                         final TaskModel newTask = TaskModel(
-                          id: DateTime.now().toString(),
                           title: taskTextEditingController.text,
                           status: 'In Progress',
                           lastUpdated: DateTime.now(),

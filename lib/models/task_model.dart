@@ -1,13 +1,15 @@
 import 'dart:convert';
+import 'package:isar/isar.dart';
+part 'task_model.g.dart';
 
+@collection
 class TaskModel {
-  final String id;
-  String title;
-  String status;
+  Id id = Isar.autoIncrement;
+  late String title;
+  late String status;
   DateTime? lastUpdated;
 
   TaskModel({
-    required this.id,
     required this.title,
     this.status = "In Progress",
     DateTime? lastUpdated,
@@ -20,17 +22,17 @@ class TaskModel {
     return <String, dynamic>{
       'id': id,
       'title': title,
+      'status': status,
       'lastUpdated' : lastUpdated?.toIso8601String(),
     };
   }
 
   factory TaskModel.fromMap(Map<String, dynamic> map) {
     return TaskModel(
-      id: map['id'] as String,
       title: map['title'] as String,
       status: map['status'] as String? ?? 'In Progress',
       lastUpdated: map['lastUpdated'] != null ? DateTime.parse(map['lastUpdated']) : null,
-    );
+      )..id = map['id'] as int;
   }
   String toJson() => json.encode(toMap());
 
